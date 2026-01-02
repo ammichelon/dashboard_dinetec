@@ -4,24 +4,20 @@ const helmet = require("helmet");
 const compression = require("compression");
 const path = require("path");
 const fs = require("fs");
-// const PDFDocument = require("pdfkit"); // ❌ não usamos mais PDF
 
-// ✅ NEW: diretório persistente (Railway Volume) + caminho do DB
-// No Rasp tu não precisa setar nada: cai nos defaults.
+// Persistência (Railway Volume)
 const DATA_DIR = process.env.DATA_DIR || null;
 const DB_PATH = process.env.DB_PATH || null;
-
-// ✅ NEW: se existir DB_PATH, deixa visível para o initDb (caso ele leia env)
-// (não quebra no Rasp porque DB_PATH vai ser null e não altera nada)
 if (DB_PATH) process.env.DB_PATH = DB_PATH;
 
+// Segurança ingest
+const INGEST_TOKEN = process.env.INGEST_TOKEN || "";
+
+// DB helpers
 const { initDb, nowParts, normalizePhone } = require("./db");
 
 const PORT = process.env.PORT || 3000;
 const CHECKIN_COOLDOWN_MIN = Number(process.env.CHECKIN_COOLDOWN_MIN || 30);
-
-const HS_USERNAME = process.env.HS_USERNAME || "free";
-const HS_PASSWORD = process.env.HS_PASSWORD || "free";
 
 // ===== CSV helpers =====
 function csvEscape(v) {
@@ -35,13 +31,11 @@ function toCsv(rows, headers) {
   const body = rows.map((r) => headers.map((h) => csvEscape(r[h])).join(",")).join("\n");
   return head + "\n" + body + "\n";
 }
-
 function safeDayKey(s) {
   const v = String(s || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
   return v;
 }
-
 function parseJsonArrayMaybe(s) {
   if (!s) return [];
   const t = String(s).trim();
@@ -57,9 +51,7 @@ function parseJsonArrayMaybe(s) {
   return [];
 }
 
-/**
- * ✅ Página de sucesso iOS-friendly
- */
+// ✅ Página de sucesso iOS-friendly
 function renderSuccessHtml() {
   return `<!doctype html>
 <html lang="pt-BR">
@@ -71,12 +63,7 @@ function renderSuccessHtml() {
   <meta http-equiv="expires" content="-1" />
   <title>Internet liberada</title>
   <style>
-    :root{
-      --g1:#0b5a2a;
-      --g2:#1f7a36;
-      --line:#e7edf0;
-      --muted:#5b677a;
-    }
+    :root{ --g1:#0b5a2a; --g2:#1f7a36; --line:#e7edf0; --muted:#5b677a; }
     *{box-sizing:border-box}
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;background:#fff;padding:18px}
     .wrap{max-width:420px;margin:0 auto}
@@ -91,10 +78,7 @@ function renderSuccessHtml() {
 </head>
 <body>
   <div class="wrap">
-    <div class="logo">
-      <img src="/logo_bs.png" alt="Boa Safra">
-    </div>
-
+    <div class="logo"><img src="/logo_bs.png" alt="Boa Safra"></div>
     <div class="card">
       <h1>Internet liberada ✅</h1>
       <p>Seu acesso já foi liberado. Se esta tela não fechar sozinha, toque em <b>OK</b>.</p>
@@ -102,7 +86,6 @@ function renderSuccessHtml() {
       <div class="small">Você já pode navegar normalmente.</div>
     </div>
   </div>
-
   <script>
     function tryClose(){
       try { window.close(); } catch(e){}
@@ -122,7 +105,7 @@ async function fetchCountsByOrigem(db, whereSql, params) {
   return { wifi, ipad };
 }
 
-// Agregados do PRODUTOR para pizzas
+// Agregados do PRODUTOR
 async function producerAggregates(db, dayKey = null) {
   const params = [];
   let where = "WHERE perfil = 'produtor'";
@@ -213,7 +196,6 @@ async function dashboardSummary(db) {
   const { wifi, ipad } = await fetchCountsByOrigem(db, "", []);
 
   const byPerfil = await db.all("SELECT perfil, COUNT(*) as n FROM leads GROUP BY perfil ORDER BY n DESC");
-
   const byDayLeads = await db.all("SELECT day_key, COUNT(*) as n FROM leads GROUP BY day_key ORDER BY day_key");
   const byDayCheckins = await db.all("SELECT day_key, COUNT(*) as n FROM checkins GROUP BY day_key ORDER BY day_key");
 
@@ -233,7 +215,7 @@ async function dashboardSummary(db) {
   };
 }
 
-// ✅ CSV LIMPO (somente data/hora de criação do lead + campos importantes)
+// CSV limpo
 async function exportLeadsClean(db, dayKey = null) {
   const params = [];
   let where = "";
@@ -292,13 +274,19 @@ const EXPORT_LEADS_HEADERS = [
   "comercial_cargo",
 ];
 
+// ====== Start ======
 (async () => {
   const db = await initDb();
+
+  // garante índice único p/ não duplicar checkins no Railway
+  try {
+    await db.run("CREATE UNIQUE INDEX IF NOT EXISTS ux_checkins_lead_time ON checkins(lead_id, created_at)");
+  } catch {}
 
   const app = express();
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(compression());
-  app.use(express.json({ limit: "200kb" }));
+  app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: false }));
 
   app.use((req, res, next) => {
@@ -308,10 +296,9 @@ const EXPORT_LEADS_HEADERS = [
 
   app.use(express.static(path.join(__dirname, "public")));
 
-  // ========== BACKUP automático CSV (30 min) ==========
+  // BACKUP CSV (30 min)
   async function autoCsvBackup() {
     try {
-      // ✅ NEW: backups no volume quando DATA_DIR existir
       const baseDir = DATA_DIR ? path.resolve(DATA_DIR) : __dirname;
       const backupDir = path.join(baseDir, "backups");
       if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
@@ -344,7 +331,7 @@ const EXPORT_LEADS_HEADERS = [
 
   async function createLead(payload, origem) {
     const { iso, dayKey, hour } = nowParts();
-    const telefoneNorm = normalizePhone(payload.telefone);
+    const telefoneNorm = normalizePhone(payload.telefone || payload.telefone_raw);
     if (!telefoneNorm) throw new Error("Telefone inválido");
 
     const perfil = payload.perfil;
@@ -360,15 +347,19 @@ const EXPORT_LEADS_HEADERS = [
     if (payload.comprou_ultima === true) comprou_ultima = 1;
     else if (payload.comprou_ultima === false) comprou_ultima = 0;
 
-    const sementes_atuais = Array.isArray(payload.sementes_atuais) ? JSON.stringify(payload.sementes_atuais) : null;
+    const sementes_atuais = Array.isArray(payload.sementes_atuais) ? JSON.stringify(payload.sementes_atuais) : (payload.sementes_atuais || null);
     const sementes_outras = (payload.sementes_outras || "").trim() || null;
 
-    const culturas = Array.isArray(payload.culturas) ? JSON.stringify(payload.culturas) : null;
+    const culturas = Array.isArray(payload.culturas) ? JSON.stringify(payload.culturas) : (payload.culturas || null);
     const culturas_outras = (payload.culturas_outras || "").trim() || null;
 
     const comercial_empresa = (payload.comercial_empresa || "").trim() || null;
     const comercial_regiao = (payload.comercial_regiao || "").trim() || null;
     const comercial_cargo = (payload.comercial_cargo || "").trim() || null;
+
+    const created_at = payload.created_at || iso;
+    const day_key = payload.day_key || dayKey;
+    const hh = Number.isFinite(payload.hour) ? payload.hour : hour;
 
     await db.run(
       `INSERT OR IGNORE INTO leads
@@ -382,7 +373,7 @@ const EXPORT_LEADS_HEADERS = [
               ?, ?, ?, ?, ?)`,
       [
         (payload.nome || "").trim(),
-        String(payload.telefone || ""),
+        String(payload.telefone_raw || payload.telefone || ""),
         telefoneNorm,
         (payload.email || "").trim() || null,
         perfil,
@@ -401,9 +392,9 @@ const EXPORT_LEADS_HEADERS = [
 
         origem,
         consentimento,
-        iso,
-        dayKey,
-        hour,
+        created_at,
+        day_key,
+        hh,
       ]
     );
 
@@ -425,7 +416,59 @@ const EXPORT_LEADS_HEADERS = [
     return { created: true };
   }
 
-  // ===== /hs wifi =====
+  // ====== ✅ INGEST (Rasp -> Railway) ======
+  app.post("/api/ingest", async (req, res) => {
+    try {
+      if (!INGEST_TOKEN) return res.status(500).json({ ok: false, error: "missing_token_server" });
+      const token = String(req.body?.token || "");
+      if (token !== INGEST_TOKEN) return res.status(401).json({ ok: false, error: "bad_token" });
+
+      const leads = Array.isArray(req.body?.leads) ? req.body.leads : [];
+      const checkins = Array.isArray(req.body?.checkins) ? req.body.checkins : [];
+
+      let leadsOk = 0;
+      let checkinsOk = 0;
+
+      // 1) grava leads
+      for (const item of leads) {
+        try {
+          if (!item?.nome || !(item?.telefone_raw || item?.telefone_norm || item?.telefone)) continue;
+          if (!item?.perfil) continue;
+          const origem = item.origem === "wifi" || item.origem === "ipad" ? item.origem : "ipad";
+          await createLead(item, origem);
+          leadsOk++;
+        } catch {}
+      }
+
+      // 2) grava checkins (resolve lead_id por telefone_norm)
+      for (const c of checkins) {
+        try {
+          const telefoneNorm = c.telefone_norm ? String(c.telefone_norm) : normalizePhone(c.telefone_raw || c.telefone);
+          if (!telefoneNorm) continue;
+
+          const lead = await db.get("SELECT id FROM leads WHERE telefone_norm = ?", telefoneNorm);
+          if (!lead?.id) continue;
+
+          const created_at = c.created_at || new Date().toISOString();
+          const day_key = c.day_key || created_at.slice(0, 10);
+          const hh = Number.isFinite(c.hour) ? c.hour : Number(String(created_at).slice(11, 13));
+
+          // evita duplicar com índice único (lead_id, created_at)
+          await db.run(
+            "INSERT OR IGNORE INTO checkins (lead_id, origem, created_at, day_key, hour) VALUES (?, 'wifi', ?, ?, ?)",
+            [lead.id, created_at, day_key, hh]
+          );
+          checkinsOk++;
+        } catch {}
+      }
+
+      return res.json({ ok: true, leads_received: leads.length, leads_saved: leadsOk, checkins_received: checkins.length, checkins_saved: checkinsOk });
+    } catch {
+      return res.status(500).json({ ok: false, error: "ingest_failed" });
+    }
+  });
+
+  // ===== Wi-Fi (/hs) =====
   app.get("/hs", async (req, res) => {
     try {
       const nome = (req.query.nome || "").trim();
@@ -462,7 +505,7 @@ const EXPORT_LEADS_HEADERS = [
     return res.status(200).send(renderSuccessHtml());
   });
 
-  // ===== iPad =====
+  // iPad
   app.post("/api/leads", async (req, res) => {
     try {
       const p = req.body || {};
@@ -474,7 +517,7 @@ const EXPORT_LEADS_HEADERS = [
     }
   });
 
-  // ===== Dashboard APIs =====
+  // Dashboard APIs
   app.get("/api/dashboard/days", async (req, res) => {
     try {
       const rows = await db.all("SELECT DISTINCT day_key FROM leads ORDER BY day_key");
@@ -502,7 +545,7 @@ const EXPORT_LEADS_HEADERS = [
     }
   });
 
-  // ✅ ===== CSV LIMPO (botão do dashboard usa isso) =====
+  // CSV
   app.get("/api/export/leads.csv", async (req, res) => {
     try {
       const qDay = safeDayKey(req.query.day);
@@ -520,9 +563,7 @@ const EXPORT_LEADS_HEADERS = [
     }
   });
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ Rodando em http://0.0.0.0:${PORT}`);
-});
-
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`✅ Leads system rodando em http://0.0.0.0:${PORT}`);
+  });
 })();
