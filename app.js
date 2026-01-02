@@ -520,5 +520,13 @@ const EXPORT_LEADS_HEADERS = [
     }
   });
 
-  app.listen(PORT, () => console.log(`✅ Leads system rodando em http://0.0.0.0:${PORT}`));
+ const PORT = process.env.PORT || 8080;
+const HOST = "0.0.0.0";
+
+console.log("PORT do Railway:", process.env.PORT);
+
+app.listen(PORT, HOST, () => {
+  console.log(`✅ Leads system rodando em http://${HOST}:${PORT}`);
+});
+
 })();
