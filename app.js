@@ -528,12 +528,14 @@ const EXPORT_LEADS_HEADERS = [
   });
 
   app.get("/api/dashboard/summary", async (req, res) => {
-    try {
-      return res.json(await dashboardSummary(db));
-    } catch {
-      return res.status(500).json({ ok: false });
-    }
-  });
+  try {
+    return res.json(await dashboardSummary(db));
+  } catch (err) {
+    console.error("❌ /api/dashboard/summary error:", err);
+    return res.status(500).json({ ok: false, error: String(err?.message || err) });
+  }
+});
+
 
   app.get("/api/dashboard/day/:dayKey", async (req, res) => {
     try {
