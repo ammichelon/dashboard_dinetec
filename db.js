@@ -8,8 +8,20 @@ const SCHEMA_PATH = path.join(__dirname, "schema.sql");
 
 async function initDb() {
   const db = await open({ filename: DB_PATH, driver: sqlite3.Database });
-  const schema = fs.readFileSync(SCHEMA_PATH, "utf8");
-  await db.exec(schema);
+  const schemaPath = path.join(__dirname, "schema.sql");
+
+if (fs.existsSync(schemaPath)) {
+  const schema = fs.readFileSync(schemaPath, "utf8");
+  try {
+    await db.exec(schema);
+  } catch (err) {
+    // ignora erro de tabelas já existentes
+    if (!String(err.message).includes("already exists")) {
+      throw err;
+    }
+  }
+}
+
   return db;
 }
 
