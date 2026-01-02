@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boa Safra • Cadastro (iPad)</title>
+  <style>
+    :root{
+      --green-dark:#0b5a2a;
+      --green:#1f7a36;
+      --green-light:#86c440;
+      --bg:#ffffff;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#5b677a;
+      --line:#e7edf0;
+      --radius:18px;
+      --shadow:0 10px 24px rgba(15, 23, 42, .08);
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; min-height:100vh; padding:18px; }
+    .wrap{ max-width:980px; margin:0 auto; }
+
+    /* ✅ LOGO */
+    .logo-wrap{
+      width:100%;
+      display:flex;
+      justify-content:center;
+      margin:2px 0 10px;
+    }
+    .logo-wrap img{
+      width:100%;
+      max-width:260px; /* bom pra iPad, sem ficar exagerado */
+      height:auto;
+    }
+
+    header{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; padding-bottom:10px; border-bottom:1px solid var(--line); }
+    h1{ margin:0; font-size:20px; font-weight:900; color:var(--green-dark); }
+    .sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+    .accent{ height:6px; width:100%; border-radius:999px; background:linear-gradient(90deg,var(--green-dark),var(--green),var(--green-light)); margin:12px 0 14px; }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width:900px){ .grid{ grid-template-columns:1fr; } }
+    label{ font-size:12px; color:var(--muted); font-weight:800; }
+    input, select{
+      width:100%; border:1px solid var(--line); border-radius:14px; padding:12px 12px;
+      font-size:16px; outline:none; background:#fff;
+    }
+    input:focus, select:focus{ border-color:rgba(31,122,54,.5); box-shadow:0 0 0 4px rgba(134,196,64,.18); }
+    .section{ margin-top:14px; padding:14px; border:1px solid var(--line); border-radius:16px; background:#f7faf8; }
+    .section-title{ font-size:13px; font-weight:900; color:var(--green-dark); margin:0 0 10px; }
+    .radio-row{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:6px; }
+    .radio{ display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid var(--line); border-radius:999px; background:#fff; cursor:pointer; user-select:none; font-size:14px; color:var(--text); }
+    .radio input{ width:auto; margin:0; }
+    .check-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+    @media (max-width:900px){ .check-grid{ grid-template-columns:1fr; } }
+    .chk{ display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:14px; background:#fff; font-weight:800; color:#0f172a; }
+    .chk input{ width:18px; height:18px; margin:0; }
+    .row{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; flex-wrap:wrap; }
+    .btn{ border:none; border-radius:14px; padding:12px 16px; font-weight:900; font-size:15px; color:#fff; background:linear-gradient(90deg,var(--green-dark),var(--green)); cursor:pointer; box-shadow:0 10px 22px rgba(31,122,54,.18); min-width:240px; }
+    .btn:active{ transform: translateY(1px); }
+    .status{ font-size:13px; color:var(--muted); min-height:18px; font-weight:700; }
+    .consent{ display:flex; align-items:center; gap:10px; color:var(--muted); font-weight:800; font-size:13px; user-select:none; }
+    .consent input{ width:18px; height:18px; }
+    .hide{ display:none; }
+    .hint{ font-size:12px; color:var(--muted); margin-top:6px; font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- ✅ LOGO Boa Safra -->
+    <div class="logo-wrap">
+      <img src="logo_bs.png" alt="Boa Safra">
+    </div>
+
+    <header>
+      <div>
+        <h1>Cadastro </h1>
+        <div class="sub">Coletar todos os dados!</div>
+      </div>
+    </header>
+
+    <div class="accent"></div>
+
+    <div class="card">
+      <form id="f" autocomplete="on">
+        <div class="grid">
+          <div>
+            <label for="nome">Nome</label>
+            <input id="nome" name="nome" placeholder="Nome completo" required>
+          </div>
+          <div>
+            <label for="telefone">Celular</label>
+            <input id="telefone" name="telefone" inputmode="tel" autocomplete="tel" placeholder="(DDD) 9XXXX-XXXX" required>
+          </div>
+          <div>
+            <label for="email">E-mail</label>
+            <input id="email" name="email" type="email" autocomplete="email" placeholder="email@exemplo.com">
+          </div>
+          <div>
+            <label for="perfil">Perfil</label>
+            <select id="perfil" name="perfil" required>
+              <option value="">Selecione…</option>
+              <option value="produtor">Produtor</option>
+              <option value="comercial">Comercial</option>
+              <option value="visitante">Visitante</option>
+              <option value="estudante">Estudante</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- PRODUTOR -->
+        <div class="section hide" id="secProdutor">
+          <p class="section-title">Produtor</p>
+
+          <label for="area_soja">1) Área total cultivada com soja</label>
+          <select id="area_soja" name="area_soja">
+            <option value="">Selecione…</option>
+            <option value="Até 1.000 ha">Até 1.000 ha</option>
+            <option value="1.001 a 3.000 ha">1.001 a 3.000 ha</option>
+            <option value="3.001 a 7.000 ha">3.001 a 7.000 ha</option>
+            <option value="7.001 a 15.000 ha">7.001 a 15.000 ha</option>
+            <option value="Acima de 15.000 ha">Acima de 15.000 ha</option>
+          </select>
+
+          <div style="margin-top:14px;">
+            <label>2) Você já é cliente da Boa Safra?</label>
+            <div class="radio-row">
+              <label class="radio"><input type="radio" name="cliente_boasafra" value="sim">Sim</label>
+              <label class="radio"><input type="radio" name="cliente_boasafra" value="nao">Não</label>
+            </div>
+          </div>
+
+          <div class="hide" id="boxComprouUltima" style="margin-top:12px;">
+            <label>Você comprou sementes da Boa Safra na última safra?</label>
+            <div class="radio-row">
+              <label class="radio"><input type="radio" name="comprou_ultima" value="sim">Sim</label>
+              <label class="radio"><input type="radio" name="comprou_ultima" value="nao">Não</label>
+            </div>
+          </div>
+
+          <div class="hide" id="boxSementesAtuais" style="margin-top:12px;">
+            <label>Se não é cliente: com quais empresas de sementes você trabalha hoje? (pode marcar mais de uma)</label>
+            <div class="check-grid">
+              <label class="chk"><input type="checkbox" name="sementes_atuais" value="Brasmax">Brasmax</label>
+              <label class="chk"><input type="checkbox" name="sementes_atuais" value="Monsoy">Monsoy</label>
+              <label class="chk"><input type="checkbox" name="sementes_atuais" value="TMG">TMG</label>
+              <label class="chk"><input type="checkbox" name="sementes_atuais" value="Nidera">Nidera</label>
+              <label class="chk"><input type="checkbox" name="sementes_atuais" value="Donmario">Donmario</label>
+              <label class="chk"><input type="checkbox" name="sementes_atuais" value="Pioneer">Pioneer</label>
+              <label class="chk"><input type="checkbox" name="sementes_atuais" value="Semente salva / própria">Semente salva / própria</label>
+              <label class="chk"><input type="checkbox" id="sementesOutrasChk" value="Outras">Outras</label>
+            </div>
+            <div class="hide" id="sementesOutrasBox" style="margin-top:10px;">
+              <label for="sementes_outras">Outras (quais?)</label>
+              <input id="sementes_outras" name="sementes_outras" placeholder="Digite…">
+            </div>
+          </div>
+
+          <div style="margin-top:14px;">
+            <label>3) Quais culturas você planta atualmente? (pode marcar mais de uma)</label>
+            <div class="check-grid">
+              <label class="chk"><input type="checkbox" name="culturas" value="Soja">Soja</label>
+              <label class="chk"><input type="checkbox" name="culturas" value="Milho">Milho</label>
+              <label class="chk"><input type="checkbox" name="culturas" value="Feijão">Feijão</label>
+              <label class="chk"><input type="checkbox" name="culturas" value="Trigo">Trigo</label>
+              <label class="chk"><input type="checkbox" name="culturas" value="Sorgo">Sorgo</label>
+              <label class="chk"><input type="checkbox" name="culturas" value="Forrageiras">Forrageiras</label>
+              <label class="chk"><input type="checkbox" name="culturas" value="Pastagem / Pecuária">Pastagem / Pecuária</label>
+              <label class="chk"><input type="checkbox" id="culturasOutrasChk" value="Outras">Outras</label>
+            </div>
+            <div class="hide" id="culturasOutrasBox" style="margin-top:10px;">
+              <label for="culturas_outras">Outras (quais?)</label>
+              <input id="culturas_outras" name="culturas_outras" placeholder="Digite…">
+            </div>
+          </div>
+
+          <div class="hint">Obs: estes campos só aparecem para Produtor.</div>
+        </div>
+
+        <!-- COMERCIAL -->
+        <div class="section hide" id="secComercial">
+          <p class="section-title">Comercial</p>
+
+          <label for="comercial_empresa">1) Empresa / revenda que você representa</label>
+          <input id="comercial_empresa" name="comercial_empresa" placeholder="Digite…">
+
+          <div style="margin-top:12px;">
+            <label for="comercial_regiao">2) Região de atuação</label>
+            <input id="comercial_regiao" name="comercial_regiao" placeholder="Ex: MT Norte, Oeste da Bahia, Sul do MS, GO…">
+          </div>
+
+          <div style="margin-top:12px;">
+            <label for="comercial_cargo">3) Cargo / função</label>
+            <input id="comercial_cargo" name="comercial_cargo" placeholder="Ex: RTV, vendedor, gerente comercial, consultor técnico…">
+          </div>
+
+          <div class="hint">Obs: estes campos só aparecem para Comercial.</div>
+        </div>
+
+        <div class="row">
+          <label class="consent"><input type="checkbox" name="consentimento" checked> Autorizo contato</label>
+          <button class="btn" type="submit" id="btn">Cadastrar</button>
+        </div>
+
+        <div class="status" id="msg"></div>
+      </form>
+    </div>
+  </div>
+
+<script>
+  const f = document.getElementById('f');
+  const msg = document.getElementById('msg');
+  const btn = document.getElementById('btn');
+
+  const secProd = document.getElementById('secProdutor');
+  const secCom = document.getElementById('secComercial');
+
+  const boxComprouUltima = document.getElementById('boxComprouUltima');
+  const boxSementesAtuais = document.getElementById('boxSementesAtuais');
+
+  const sementesOutrasChk = document.getElementById('sementesOutrasChk');
+  const sementesOutrasBox = document.getElementById('sementesOutrasBox');
+
+  const culturasOutrasChk = document.getElementById('culturasOutrasChk');
+  const culturasOutrasBox = document.getElementById('culturasOutrasBox');
+
+  function setStatus(t){ msg.textContent = t || ""; }
+  function lockUI(lock){
+    btn.disabled = lock;
+    btn.style.opacity = lock ? .7 : 1;
+  }
+
+  function resetProdutorUI(){
+    boxComprouUltima.classList.add('hide');
+    boxSementesAtuais.classList.add('hide');
+
+    sementesOutrasBox.classList.add('hide');
+    document.getElementById('sementes_outras').value = "";
+    sementesOutrasChk.checked = false;
+
+    culturasOutrasBox.classList.add('hide');
+    document.getElementById('culturas_outras').value = "";
+    culturasOutrasChk.checked = false;
+
+    f.querySelectorAll('input[name="cliente_boasafra"]').forEach(x=>x.checked=false);
+    f.querySelectorAll('input[name="comprou_ultima"]').forEach(x=>x.checked=false);
+    f.querySelectorAll('input[name="sementes_atuais"]').forEach(x=>x.checked=false);
+    f.querySelectorAll('input[name="culturas"]').forEach(x=>x.checked=false);
+    document.getElementById('area_soja').value = "";
+  }
+
+  function resetComercialUI(){
+    document.getElementById('comercial_empresa').value = "";
+    document.getElementById('comercial_regiao').value = "";
+    document.getElementById('comercial_cargo').value = "";
+  }
+
+  f.perfil.addEventListener('change', () => {
+    const p = f.perfil.value;
+    const isProd = p === 'produtor';
+    const isCom = p === 'comercial';
+
+    secProd.classList.toggle('hide', !isProd);
+    secCom.classList.toggle('hide', !isCom);
+
+    if(!isProd) resetProdutorUI();
+    if(!isCom) resetComercialUI();
+  });
+
+  document.addEventListener('change', () => {
+    const p = f.perfil.value;
+    if(p !== 'produtor') return;
+
+    const fd = new FormData(f);
+    const cliente = fd.get('cliente_boasafra'); // sim|nao|null
+
+    boxComprouUltima.classList.toggle('hide', cliente !== 'sim');
+    boxSementesAtuais.classList.toggle('hide', cliente !== 'nao');
+
+    sementesOutrasBox.classList.toggle('hide', !sementesOutrasChk.checked);
+    if(!sementesOutrasChk.checked) document.getElementById('sementes_outras').value = "";
+
+    culturasOutrasBox.classList.toggle('hide', !culturasOutrasChk.checked);
+    if(!culturasOutrasChk.checked) document.getElementById('culturas_outras').value = "";
+  });
+
+  function getCheckedValues(name){
+    return Array.from(f.querySelectorAll(\`input[name="\${name}"]:checked\`)).map(x => x.value);
+  }
+
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    lockUI(true);
+    setStatus("Salvando…");
+
+    const fd = new FormData(f);
+
+    const payload = {
+      nome: fd.get('nome'),
+      telefone: fd.get('telefone'),
+      email: fd.get('email'),
+      perfil: fd.get('perfil'),
+      consentimento: fd.get('consentimento') === 'on'
+    };
+
+    if(payload.perfil === 'produtor'){
+      payload.area_soja = fd.get('area_soja') || "";
+      const cliente = fd.get('cliente_boasafra');
+      if(cliente === 'sim') payload.cliente_boasafra = true;
+      if(cliente === 'nao') payload.cliente_boasafra = false;
+
+      const comprou = fd.get('comprou_ultima');
+      if(comprou === 'sim') payload.comprou_ultima = true;
+      if(comprou === 'nao') payload.comprou_ultima = false;
+
+      const sementes = getCheckedValues('sementes_atuais');
+      payload.sementes_atuais = sementes;
+      payload.sementes_outras = sementesOutrasChk.checked ? (fd.get('sementes_outras') || "") : "";
+
+      const culturas = getCheckedValues('culturas');
+      payload.culturas = culturas;
+      payload.culturas_outras = culturasOutrasChk.checked ? (fd.get('culturas_outras') || "") : "";
+    }
+
+    if(payload.perfil === 'comercial'){
+      payload.comercial_empresa = (fd.get('comercial_empresa') || "");
+      payload.comercial_regiao = (fd.get('comercial_regiao') || "");
+      payload.comercial_cargo = (fd.get('comercial_cargo') || "");
+    }
+
+    try{
+      await fetch('/api/leads', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+
+      f.reset();
+      secProd.classList.add('hide');
+      secCom.classList.add('hide');
+      resetProdutorUI();
+      resetComercialUI();
+
+      setStatus("Cadastrado com sucesso ✅");
+      lockUI(false);
+
+      setTimeout(()=> {
+        setStatus("");
+        document.getElementById('nome').focus();
+      }, 900);
+
+    }catch(e2){
+      setStatus("Erro de conexão. Tente novamente.");
+      lockUI(false);
+    }
+  });
+
+  document.getElementById('nome').focus();
+</script>
+</body>
+</html>

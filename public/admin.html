@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard • Boa Safra</title>
+
+  <!-- (Opcional) Poppins via Google Fonts. Se preferir 100% offline, pode remover este link. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      /* Paleta inspirada no banner */
+      --green-dark: #0b5a2a;    /* verde escuro */
+      --green:      #1f7a36;   /* verde principal */
+      --green-mid:  #2ea043;   /* verde médio */
+      --green-light:#86c440;   /* verde claro (tipo limão) */
+      --bg:         #ffffff;
+      --card:       #ffffff;
+      --text:       #0f172a;
+      --muted:      #5b677a;
+      --line:       #e7edf0;
+      --shadow:     0 10px 24px rgba(15, 23, 42, .08);
+      --radius:     18px;
+      --ok:         #16a34a;
+      --warn:       #f59e0b;
+
+      font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    body{
+      margin:0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .wrap{
+      max-width: 1150px;
+      margin: 0 auto;
+      padding: 18px 18px 28px;
+    }
+
+    header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    h1{
+      margin:0;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: .2px;
+      color: var(--green-dark);
+    }
+
+    .sub{
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+
+    button{
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--green-dark);
+      font-weight: 600;
+      padding: 10px 12px;
+      border-radius: 14px;
+      cursor:pointer;
+      box-shadow: 0 6px 14px rgba(15,23,42,.06);
+    }
+    button:hover{ transform: translateY(-1px); }
+    button:active{ transform: translateY(0px); }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .kpi{ grid-column: span 3; }
+    .row2{ grid-column: span 6; }
+    .row3{ grid-column: span 6; }
+
+    @media (max-width: 920px){
+      .kpi{ grid-column: span 6; }
+      .row2, .row3{ grid-column: span 12; }
+      header{ align-items:flex-start; flex-direction:column; }
+    }
+
+    .kpi .label{
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .kpi .value{
+      font-size: 30px;
+      font-weight: 700;
+      margin-top: 6px;
+      color: var(--green-dark);
+    }
+
+    .kpi .hint{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .accent{
+      height: 6px;
+      width: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--green-dark), var(--green), var(--green-light));
+      margin-top: 10px;
+    }
+
+    .title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .title h2{
+      margin:0;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .2px;
+      color: var(--green-dark);
+    }
+
+    .badge{
+      font-size: 12px;
+      color: var(--muted);
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f7faf8;
+    }
+
+    .legend{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top: 10px;
+    }
+
+    .lg{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+    }
+
+    .dot{
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background:#000;
+    }
+
+    .barwrap{
+      display:flex;
+      flex-direction:column;
+      gap: 9px;
+    }
+
+    .barrow{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+    }
+
+    .barrow .h{
+      width: 42px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .bar{
+      flex:1;
+      height: 10px;
+      background: #f3f7f5;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      overflow:hidden;
+    }
+
+    .fill{
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--green), var(--green-light));
+    }
+
+    .n{
+      width: 34px;
+      text-align:right;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .footer{
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .err{
+      margin-top: 10px;
+      font-size: 12px;
+      color: #b42318;
+      white-space: pre-wrap;
+      background: #fff1f1;
+      border: 1px solid #ffd0d0;
+      padding: 10px;
+      border-radius: 12px;
+      display:none;
+    }
+
+    canvas{
+      width: 100%;
+      height: 240px;
+    }
+
+    .pill-ok{
+      color: var(--ok);
+      font-weight: 700;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <h1>Dashboard • Boa Safra</h1>
+        <div class="sub" id="subtitle">carregando…</div>
+      </div>
+      <div class="actions">
+        <span class="badge" id="day_badge">–</span>
+        <button id="refresh">Atualizar</button>
+      </div>
+    </header>
+
+    <div class="accent"></div>
+
+    <main class="grid">
+      <div class="card kpi">
+        <div class="label">Leads hoje</div>
+        <div class="value" id="k_leads">–</div>
+        <div class="hint">cadastros únicos</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="label">Check-ins hoje</div>
+        <div class="value" id="k_checkins">–</div>
+        <div class="hint">acessos no Wi-Fi</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="label">Perfil líder</div>
+        <div class="value" id="k_top">–</div>
+        <div class="hint">maior volume no dia</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="label">Hora pico</div>
+        <div class="value" id="k_peak">–</div>
+        <div class="hint">pelo check-in</div>
+      </div>
+
+      <div class="card row2">
+        <div class="title">
+          <h2>Perfis (Leads do dia)</h2>
+          <span class="badge">pizza</span>
+        </div>
+        <canvas id="pie"></canvas>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="card row3">
+        <div class="title">
+          <h2>Check-ins por hora</h2>
+          <span class="badge">0–23h</span>
+        </div>
+        <div class="barwrap" id="bars"></div>
+        <div class="footer" id="note"></div>
+        <div class="err" id="err"></div>
+      </div>
+    </main>
+  </div>
+
+<script>
+  const el = (id)=>document.getElementById(id);
+
+  function fmtHour(h){
+    const hh = String(h).padStart(2,'0');
+    return `${hh}h`;
+  }
+
+  // Cores por perfil nos verdes (mantendo distinção)
+  const perfilOrder = ["produtor","comercial","visitante","estudante"];
+  const perfilColor = {
+    produtor:  getComputedStyle(document.documentElement).getPropertyValue('--green-dark').trim(),
+    comercial: getComputedStyle(document.documentElement).getPropertyValue('--green').trim(),
+    visitante: getComputedStyle(document.documentElement).getPropertyValue('--green-mid').trim(),
+    estudante: getComputedStyle(document.documentElement).getPropertyValue('--green-light').trim()
+  };
+  const perfilLabel = {
+    produtor: "Produtor",
+    comercial: "Comercial",
+    visitante: "Visitante",
+    estudante: "Estudante"
+  };
+
+  function drawPie(canvas, slices){
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width  = canvas.clientWidth  * devicePixelRatio;
+    const h = canvas.height = canvas.clientHeight * devicePixelRatio;
+    ctx.clearRect(0,0,w,h);
+
+    const total = slices.reduce((a,s)=>a+s.value,0);
+    const cx = w/2, cy = h/2;
+    const r = Math.min(w,h)*0.33;
+
+    // donut
+    let a0 = -Math.PI/2;
+    slices.forEach(s=>{
+      const ang = total ? (s.value/total)*Math.PI*2 : 0;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,a0,a0+ang);
+      ctx.closePath();
+      ctx.fillStyle = s.color;
+      ctx.fill();
+      a0 += ang;
+    });
+
+    // furo
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.arc(cx,cy,r*0.60,0,Math.PI*2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+
+    // texto centro
+    ctx.fillStyle = "#0f172a";
+    ctx.textAlign = "center";
+    ctx.font = `${13*devicePixelRatio}px Poppins, system-ui`;
+    ctx.fillText("Total", cx, cy - 6*devicePixelRatio);
+    ctx.font = `${26*devicePixelRatio}px Poppins, system-ui`;
+    ctx.fillText(String(total), cx, cy + 22*devicePixelRatio);
+  }
+
+  function setLegend(slices){
+    const box = el("legend");
+    box.innerHTML = "";
+    const total = slices.reduce((a,s)=>a+s.value,0) || 1;
+    slices.forEach(s=>{
+      const pct = Math.round((s.value/total)*100);
+      const item = document.createElement("div");
+      item.className = "lg";
+      item.innerHTML = `
+        <span class="dot" style="background:${s.color}"></span>
+        <span>${s.label}: <b style="color:#0f172a">${s.value}</b> <span style="color:#5b677a">(${pct}%)</span></span>
+      `;
+      box.appendChild(item);
+    });
+  }
+
+  function setBars(byHour){
+    const bars = el("bars");
+    bars.innerHTML = "";
+    const map = new Map(byHour.map(x=>[x.hour, x.n]));
+    const hours = [];
+    for (let h=0; h<24; h++) hours.push({hour:h, n: map.get(h) || 0});
+    const max = Math.max(...hours.map(x=>x.n), 1);
+
+    hours.forEach(x=>{
+      const row = document.createElement("div");
+      row.className = "barrow";
+      row.innerHTML = `
+        <div class="h">${fmtHour(x.hour)}</div>
+        <div class="bar"><div class="fill" style="width:${(x.n/max)*100}%"></div></div>
+        <div class="n">${x.n}</div>
+      `;
+      bars.appendChild(row);
+    });
+
+    const peak = hours.reduce((a,b)=> b.n>a.n ? b : a, hours[0]);
+    el("k_peak").textContent = peak.n ? fmtHour(peak.hour) : "–";
+  }
+
+  function topPerfil(byPerfil){
+    if(!byPerfil.length) return "–";
+    const top = byPerfil.reduce((a,b)=> b.n>a.n ? b : a, byPerfil[0]);
+    return perfilLabel[top.perfil] || top.perfil;
+  }
+
+  function showErr(msg){
+    const e = el("err");
+    e.style.display = "block";
+    e.textContent = msg;
+  }
+
+  async function load(){
+    el("err").style.display = "none";
+    try{
+      const r = await fetch("/api/dashboard/today", {cache:"no-store"});
+      const j = await r.json();
+
+      el("day_badge").textContent = j.day || "–";
+     
+
+      el("k_leads").textContent = j.leads_today ?? "–";
+      el("k_checkins").textContent = j.checkins_today ?? "–";
+
+      const byPerfilRaw = (j.leads_by_perfil || []);
+      const byPerfil = perfilOrder.map(p=>{
+        const found = byPerfilRaw.find(x=>x.perfil===p);
+        return { perfil:p, n: found ? found.n : 0 };
+      });
+
+      el("k_top").textContent = topPerfil(byPerfil);
+
+      const slices = byPerfil.map(x=>({
+        label: perfilLabel[x.perfil] || x.perfil,
+        value: x.n,
+        color: perfilColor[x.perfil] || "#64748b"
+      }));
+
+      drawPie(el("pie"), slices);
+      setLegend(slices);
+
+      setBars(j.checkins_by_hour || []);
+      
+    }catch(e){
+      showErr("Erro carregando dashboard:\n" + String(e));
+    }
+  }
+
+  el("refresh").addEventListener("click", load);
+  load();
+  setInterval(load, 2000);
+</script>
+</body>
+</html>
+

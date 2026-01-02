@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dashboard Boa Safra</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+  <style>
+    :root{
+      --green-dark:#0b5a2a;
+      --green:#1f7a36;
+      --green-light:#86c440;
+      --bg:#f6faf8;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#5b677a;
+      --line:#e7edf0;
+      --radius:18px;
+      --shadow:0 10px 24px rgba(15, 23, 42, .08);
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; padding:18px; }
+    .wrap{ max-width:1100px; margin:0 auto; }
+
+    .logo-wrap{ width:100%; display:flex; justify-content:center; margin:2px 0 10px; }
+    .logo-wrap img{ width:100%; max-width:260px; height:auto; }
+
+    header{
+      display:flex; align-items:flex-end; justify-content:space-between; gap:12px;
+      padding-bottom:10px; border-bottom:1px solid var(--line);
+    }
+    h1{ margin:0; font-size:20px; font-weight:900; color:var(--green-dark); }
+    .sub{ font-size:12px; color:var(--muted); margin-top:4px; font-weight:700; }
+    .sub-right{ text-align:right; }
+    .tiny{ font-size:11px; color:var(--muted); font-weight:800; margin-top:4px; }
+
+    .actions{
+      display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:8px;
+    }
+    .btn{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:10px 12px;
+      border-radius:999px;
+      font-weight:900;
+      cursor:pointer;
+      color:var(--text);
+    }
+    .btn.primary{
+      background:linear-gradient(90deg,var(--green-dark),var(--green));
+      color:#fff;
+      border-color:transparent;
+    }
+
+    .nav{
+      display:flex; gap:8px; flex-wrap:wrap;
+      padding:12px 0 6px;
+    }
+    .nav button{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:10px 12px;
+      border-radius:999px;
+      font-weight:900;
+      cursor:pointer;
+      color:var(--text);
+    }
+    .nav button.active{
+      background:linear-gradient(90deg,var(--green-dark),var(--green));
+      color:#fff;
+      border-color:transparent;
+    }
+
+    .grid4{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:12px;
+      margin-top:12px;
+    }
+    @media (max-width: 1000px){ .grid4{ grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px){ .grid4{ grid-template-columns: 1fr; } }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+    .kpi-title{ font-size:12px; color:var(--muted); font-weight:900; }
+    .kpi-val{ font-size:26px; font-weight:900; margin-top:6px; color:var(--green-dark); }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    @media (max-width: 900px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .grid3{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    @media (max-width: 1050px){ .grid3{ grid-template-columns: 1fr; } }
+
+    .card h2{
+      margin:0 0 10px;
+      font-size:14px;
+      font-weight:900;
+      color:var(--green-dark);
+    }
+
+    .chartBox{
+      width:100%;
+      max-width: 420px;
+      margin: 0 auto;
+      aspect-ratio: 1 / 1;
+      position: relative;
+    }
+    .chartBox canvas{
+      position:absolute;
+      inset:0;
+      width:100% !important;
+      height:100% !important;
+    }
+
+    .chartBoxBar{
+      width:100%;
+      height:320px;
+      position: relative;
+    }
+    .chartBoxBar canvas{
+      position:absolute;
+      inset:0;
+      width:100% !important;
+      height:100% !important;
+    }
+
+    .note{ font-size:12px; color:var(--muted); font-weight:800; margin-top:8px; text-align:center; }
+
+    /* ======= PDF mode ======= */
+    body.pdf .actions,
+    body.pdf #autoInfo{ display:none !important; }
+
+    @media print{
+      .actions, #autoInfo{ display:none !important; }
+      body{ background:#fff; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="logo-wrap">
+      <img src="/logo_bs.png" alt="Boa Safra">
+    </div>
+
+    <header>
+      <div>
+        <h1>Dashboard Boa Safra</h1>
+        <div class="sub" id="subtitle">Carregando…</div>
+      </div>
+
+      <div class="sub sub-right">
+        <div id="updated"></div>
+        <div class="tiny" id="autoInfo">Autoatualização: 30s</div>
+
+        <div class="actions">
+          <button class="btn" id="btnCsv">Baixar CSV</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="nav" id="navDays"></div>
+
+    <div class="grid4">
+      <div class="card"><div class="kpi-title">Leads (total)</div><div class="kpi-val" id="kLeads">0</div></div>
+      <div class="card"><div class="kpi-title">Leads Wi-Fi</div><div class="kpi-val" id="kWifi">0</div></div>
+      <div class="card"><div class="kpi-title">Leads iPad</div><div class="kpi-val" id="kIpad">0</div></div>
+      <div class="card"><div class="kpi-title">Check-ins</div><div class="kpi-val" id="kCheckins">0</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Leads por perfil</h2>
+        <div class="chartBox">
+          <canvas id="chPerfil"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 id="hRight">Leads e check-ins</h2>
+        <div class="chartBoxBar">
+          <canvas id="chRight"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div class="card">
+        <h2>Produtor: área (soja)</h2>
+        <div class="chartBox">
+          <canvas id="chArea"></canvas>
+        </div>
+        <div class="note" id="nProd1"></div>
+      </div>
+
+      <div class="card">
+        <h2>Produtor: marcas de sementes</h2>
+        <div class="chartBox">
+          <canvas id="chSementes"></canvas>
+        </div>
+        <div class="note" id="nProd2"></div>
+      </div>
+
+      <div class="card">
+        <h2>Produtor: culturas</h2>
+        <div class="chartBox">
+          <canvas id="chCulturas"></canvas>
+        </div>
+        <div class="note" id="nProd3"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  Chart.register(ChartDataLabels);
+  const $ = (id) => document.getElementById(id);
+
+  // sem animação/hover/tooltips
+  Chart.defaults.animation = false;
+  Chart.defaults.transitions.active = { animation: { duration: 0 } };
+  Chart.defaults.hover = { mode: null };
+  Chart.defaults.plugins.tooltip.enabled = false;
+
+  function brDay(iso){
+    if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso || "";
+    const [y,m,d] = iso.split("-");
+    return `${d}-${m}-${y}`;
+  }
+
+  // ====== URL params (day/mode/pdf) ======
+  const qs = new URLSearchParams(location.search);
+  const qsDay = qs.get("day");
+  const qsMode = qs.get("mode");
+  const isPdf = qs.get("pdf") === "1";
+  if(isPdf) document.body.classList.add("pdf");
+
+  // quando tudo renderizou (usado pelo Puppeteer)
+  function markReady(){
+    document.body.dataset.ready = "1";
+  }
+
+  let charts = {};
+  function destroyChart(key){
+    if(charts[key]) { charts[key].destroy(); charts[key] = null; }
+  }
+
+  function pie(canvasId, labels, values){
+    const total = values.reduce((a,b)=>a+(Number(b)||0),0) || 0;
+    const ctx = $(canvasId);
+
+    return new Chart(ctx, {
+      type: "pie",
+      data: { labels, datasets: [{ data: values }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        events: [],
+        plugins: {
+          legend: { position: "bottom" },
+          datalabels: {
+            color: "#fff",
+            font: { weight: "900", size: 12 },
+            formatter: (value) => {
+              const v = Number(value) || 0;
+              if(!total) return "";
+              const pct = (v / total) * 100;
+              if(pct < 4) return "";
+              return `${Math.round(pct)}%`;
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function bar(canvasId, labels, values1, label1, values2, label2){
+    const ctx = $(canvasId);
+    const datasets = [{ label: label1, data: values1 }];
+    if(values2 && label2) datasets.push({ label: label2, data: values2 });
+
+    return new Chart(ctx, {
+      type: "bar",
+      data: { labels, datasets },
+      options: {
+        responsive:true,
+        plugins:{ legend:{ position:"bottom" } },
+        scales: { y: { beginAtZero:true } },
+        events: []
+      }
+    });
+  }
+
+  function setKpis(data){
+    $("kLeads").textContent = data.leads_total ?? 0;
+    $("kWifi").textContent = data.leads_wifi ?? 0;
+    $("kIpad").textContent = data.leads_ipad ?? 0;
+    $("kCheckins").textContent = data.checkins_total ?? 0;
+  }
+
+  function renderPerfil(data){
+    destroyChart("perfil");
+    const rows = data.leads_by_perfil || [];
+    charts.perfil = pie("chPerfil",
+      rows.map(r => r.perfil || "—"),
+      rows.map(r => r.n || 0)
+    );
+  }
+
+  function renderRight(data){
+    destroyChart("right");
+
+    if(data.mode === "day"){
+      $("hRight").textContent = "Check-ins por hora";
+      const rows = data.checkins_by_hour || [];
+      charts.right = bar("chRight",
+        rows.map(r => String(r.hour).padStart(2,"0")+":00"),
+        rows.map(r => r.n || 0),
+        "Check-ins"
+      );
+      return;
+    }
+
+    $("hRight").textContent = "Leads e check-ins por dia";
+    const leads = data.leads_by_day || [];
+    const checks = data.checkins_by_day || [];
+
+    const daySet = new Set([...leads.map(x=>x.day_key), ...checks.map(x=>x.day_key)]);
+    const days = Array.from(daySet).sort();
+
+    const labels = days.map(brDay);
+    const v1 = days.map(d => (leads.find(x=>x.day_key===d)?.n ?? 0));
+    const v2 = days.map(d => (checks.find(x=>x.day_key===d)?.n ?? 0));
+
+    charts.right = bar("chRight", labels, v1, "Leads", v2, "Check-ins");
+  }
+
+  function renderProd(data){
+    const total = data.produtor_total ?? 0;
+    $("nProd1").textContent = total ? `Base: ${total} produtores` : "Sem produtores cadastrados.";
+    $("nProd2").textContent = total ? `Base: ${total} produtores` : "";
+    $("nProd3").textContent = total ? `Base: ${total} produtores` : "";
+
+    destroyChart("area");
+    const a = data.produtor_area_soja || [];
+    charts.area = pie("chArea", a.map(x=>x.label), a.map(x=>x.n));
+
+    destroyChart("sementes");
+    const s = data.produtor_sementes || [];
+    charts.sementes = pie("chSementes", s.map(x=>x.label), s.map(x=>x.n));
+
+    destroyChart("culturas");
+    const c = data.produtor_culturas || [];
+    charts.culturas = pie("chCulturas", c.map(x=>x.label), c.map(x=>x.n));
+  }
+
+  async function loadNav(){
+    const r = await fetch("/api/dashboard/days", { cache: "no-store" });
+    const j = await r.json();
+    const days = (j.days || []);
+
+    const nav = $("navDays");
+    nav.innerHTML = "";
+
+    const btnG = document.createElement("button");
+    btnG.textContent = "Geral";
+    btnG.onclick = () => showSummary();
+    btnG.dataset.mode = "summary";
+    nav.appendChild(btnG);
+
+    for(const d of days){
+      const b = document.createElement("button");
+      b.textContent = brDay(d);
+      b.onclick = () => showDay(d);
+      b.dataset.day = d;
+      nav.appendChild(b);
+    }
+  }
+
+  function setActive(mode, day){
+    const buttons = Array.from($("navDays").querySelectorAll("button"));
+    buttons.forEach(b => b.classList.remove("active"));
+    const found = buttons.find(b => (mode==="summary" ? b.dataset.mode==="summary" : b.dataset.day===day));
+    if(found) found.classList.add("active");
+  }
+
+  let currentMode = "summary";
+  let currentDay = null;
+
+  function setUpdatedNow(){
+    $("updated").textContent = new Date().toLocaleString("pt-BR");
+  }
+
+  function getPdfUrl(){
+    // ✅ PDF IGUAL DASHBOARD (novo endpoint)
+    return (currentMode === "day" && currentDay)
+      ? `/api/export/dashboard_view.pdf?day=${encodeURIComponent(currentDay)}`
+      : `/api/export/dashboard_view.pdf`;
+  }
+
+  function getCsvUrl(){
+    // ✅ CSV limpo (novo endpoint)
+    return (currentMode === "day" && currentDay)
+      ? `/api/export/leads.csv?day=${encodeURIComponent(currentDay)}`
+      : `/api/export/leads.csv`;
+  }
+
+  $("btnCsv").addEventListener("click", () => { window.location.href = getCsvUrl(); });
+
+  async function showSummary(isAuto=false){
+    document.body.dataset.ready = ""; // reset ready
+    currentMode = "summary";
+    currentDay = null;
+    if(!isAuto) setActive("summary");
+
+    const r = await fetch("/api/dashboard/summary", { cache: "no-store" });
+    const data = await r.json();
+
+    $("subtitle").textContent = "Visão geral (toda a feira)";
+    setUpdatedNow();
+
+    setKpis(data);
+    renderPerfil(data);
+    renderRight(data);
+    renderProd(data);
+
+    // marca pronto (Puppeteer espera isso)
+    markReady();
+  }
+
+  async function showDay(day, isAuto=false){
+    document.body.dataset.ready = ""; // reset ready
+    currentMode = "day";
+    currentDay = day;
+    if(!isAuto) setActive("day", day);
+
+    const r = await fetch(`/api/dashboard/day/${day}`, { cache: "no-store" });
+    const data = await r.json();
+
+    $("subtitle").textContent = `Dia ${brDay(day)}`;
+    setUpdatedNow();
+
+    setKpis(data);
+    renderPerfil(data);
+    renderRight(data);
+    renderProd(data);
+
+    markReady();
+  }
+
+  const AUTO_REFRESH_MS = 30 * 1000; // mude para 60*1000 se quiser 1 min
+  $("autoInfo").textContent = `Autoatualização: ${Math.round(AUTO_REFRESH_MS/1000)}s`;
+
+  function startAuto(){
+    if(isPdf) return; // ✅ no modo PDF não autoatualiza
+    setInterval(() => {
+      if(currentMode === "day" && currentDay) showDay(currentDay, true);
+      else showSummary(true);
+    }, AUTO_REFRESH_MS);
+  }
+
+  (async function init(){
+    await loadNav();
+
+    // ✅ respeita URL: ?day=YYYY-MM-DD ou ?mode=summary
+    if(qsDay && /^\d{4}-\d{2}-\d{2}$/.test(qsDay)){
+      await showDay(qsDay);
+      setActive("day", qsDay);
+    }else{
+      await showSummary();
+      setActive("summary");
+    }
+
+    startAuto();
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cadastro – Wi-Fi Boa Safra</title>
+  <meta name="theme-color" content="#0b5a2a" />
+  <style>
+    :root{
+      --g1:#0b5a2a; --g2:#1a7a35; --g3:#8cc63f;
+      --txt:#0f172a; --mut:#64748b; --bg:#ffffff;
+      --card:#ffffff; --bd:#e5e7eb; --err:#b91c1c;
+      --shadow:0 14px 40px rgba(2,6,23,.10);
+      --r:18px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt)}
+    .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:22px}
+    .card{width:min(720px,100%);background:var(--card);border:1px solid var(--bd);border-radius:24px;box-shadow:var(--shadow);overflow:hidden}
+    .top{padding:22px 22px 0}
+    .h{font-size:30px;line-height:1.1;margin:0;color:var(--g1);font-weight:900}
+    .p{margin:8px 0 0;color:var(--mut);font-size:14px}
+    .bar{height:10px;border-radius:999px;background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));margin:16px 22px 0}
+    .body{padding:22px}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media (min-width:740px){
+      .grid{grid-template-columns:1fr 1fr}
+      .span2{grid-column:1 / -1}
+    }
+    .box{border:1px solid var(--bd);border-radius:var(--r);padding:18px}
+    label{display:block;margin-top:10px;color:#334155;font-weight:800;font-size:12px}
+    input, select{
+      width:100%;padding:14px 14px;border-radius:14px;border:1px solid var(--bd);
+      font-size:16px;outline:none;margin-top:6px;background:#fff
+    }
+    input:focus, select:focus{border-color:#86efac;box-shadow:0 0 0 4px rgba(34,197,94,.18)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .pill{
+      flex:1 1 140px;padding:14px;border:1px solid var(--bd);border-radius:14px;
+      font-weight:900;cursor:pointer;background:#fff;color:#334155;text-align:center
+    }
+    .pill.on{border-color:#86efac;box-shadow:0 0 0 4px rgba(34,197,94,.12);background:#f0fdf4;color:var(--g1)}
+    .btn{
+      width:100%;margin-top:14px;background:var(--g1);border:none;color:#fff;
+      padding:16px 18px;border-radius:14px;font-size:18px;font-weight:900;cursor:pointer
+    }
+    .btn:active{transform:translateY(1px)}
+    .msg{margin:12px 0 0;font-size:14px;font-weight:900}
+    .msg.ok{color:var(--g2)}
+    .msg.err{color:var(--err)}
+    .hint{margin:6px 0 0;color:var(--mut);font-size:12px}
+    .spinner{
+      width:18px;height:18px;border:3px solid rgba(255,255,255,.35);
+      border-top-color:#fff;border-radius:50%;display:inline-block;vertical-align:-3px;
+      animation:spin 1s linear infinite
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .hidden{display:none !important}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <h1 class="h">Cadastro rápido</h1>
+        <p class="p">Preencha uma vez. Depois, o acesso libera mais rápido.</p>
+      </div>
+      <div class="bar"></div>
+
+      <div class="body">
+        <div class="box">
+          <div class="grid">
+            <div class="span2">
+              <label>Perfil</label>
+              <div class="row" id="perfilRow">
+                <button type="button" class="pill" data-v="produtor">Produtor</button>
+                <button type="button" class="pill" data-v="comercial">Comercial</button>
+                <button type="button" class="pill" data-v="visitante">Visitante</button>
+                <button type="button" class="pill" data-v="estudante">Estudante</button>
+              </div>
+              <div class="hint">Produtor/Comercial verá perguntas adicionais.</div>
+            </div>
+
+            <div class="span2">
+              <label for="nome">Nome</label>
+              <input id="nome" autocomplete="name" placeholder="Seu nome" />
+            </div>
+
+            <div>
+              <label for="tel">Celular</label>
+              <input id="tel" inputmode="numeric" autocomplete="tel" />
+            </div>
+
+            <div>
+              <label for="email">E-mail (opcional)</label>
+              <input id="email" type="email" autocomplete="email" placeholder="voce@email.com" />
+            </div>
+
+            <div class="span2 hidden" id="boxBoasafra">
+              <label>Você já utilizou sementes Boa Safra?</label>
+              <div class="row" id="jaUsouRow">
+                <button type="button" class="pill" data-v="sim">Sim</button>
+                <button type="button" class="pill" data-v="nao">Não</button>
+              </div>
+            </div>
+
+            <div class="span2 hidden" id="boxMarca">
+              <label for="marca">Se não, qual marca você usa?</label>
+              <input id="marca" placeholder="Ex.: Marca X" />
+            </div>
+
+            <div class="span2 hidden" id="boxComprou">
+              <label>Se sim, comprou para a última safra?</label>
+              <div class="row" id="comprouRow">
+                <button type="button" class="pill" data-v="sim">Sim</button>
+                <button type="button" class="pill" data-v="nao">Não</button>
+              </div>
+            </div>
+
+            <div class="span2">
+              <button class="btn" id="btn">
+                <span id="btnTxt">Finalizar e liberar internet</span>
+              </button>
+              <div class="msg" id="msg" style="display:none"></div>
+              <div class="hint">Ao finalizar, o acesso é liberado automaticamente.</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function qs(name){
+      const u = new URL(location.href);
+      return u.searchParams.get(name) || "";
+    }
+    function normalizePhone(v){
+      return String(v||"").replace(/\D+/g,"");
+    }
+
+    const tel = document.getElementById("tel");
+    const nome = document.getElementById("nome");
+    const email = document.getElementById("email");
+    const marca = document.getElementById("marca");
+
+    const perfilRow = document.getElementById("perfilRow");
+    const jaUsouRow = document.getElementById("jaUsouRow");
+    const comprouRow = document.getElementById("comprouRow");
+
+    const boxBoasafra = document.getElementById("boxBoasafra");
+    const boxMarca = document.getElementById("boxMarca");
+    const boxComprou = document.getElementById("boxComprou");
+
+    const btn = document.getElementById("btn");
+    const btnTxt = document.getElementById("btnTxt");
+    const msg = document.getElementById("msg");
+
+    // prefill telefone (querystring > cache)
+    const t0 = qs("tel") || "";
+    try{
+      const saved = localStorage.getItem("bs_phone") || "";
+      tel.value = t0 || saved;
+    }catch{
+      tel.value = t0;
+    }
+
+    let state = {
+      perfil: "",
+      jaUsou: null,   // true/false/null
+      comprou: null   // true/false/null
+    };
+
+    function setMsg(text, type){
+      msg.style.display = "block";
+      msg.className = "msg " + (type||"");
+      msg.textContent = text;
+    }
+
+    function setActive(container, val){
+      [...container.querySelectorAll(".pill")].forEach(b=>{
+        b.classList.toggle("on", b.dataset.v === val);
+      });
+    }
+
+    function refreshConditional(){
+      const p = state.perfil;
+      const isPC = (p === "produtor" || p === "comercial");
+
+      boxBoasafra.classList.toggle("hidden", !isPC);
+
+      if(!isPC){
+        state.jaUsou = null;
+        state.comprou = null;
+        setActive(jaUsouRow, "");
+        setActive(comprouRow, "");
+        boxMarca.classList.add("hidden");
+        boxComprou.classList.add("hidden");
+        return;
+      }
+
+      // se é produtor/comercial:
+      // jaUsou = null -> só mostra pergunta
+      // jaUsou = false -> mostra marca, esconde comprou
+      // jaUsou = true -> esconde marca, mostra comprou
+      if(state.jaUsou === false){
+        boxMarca.classList.remove("hidden");
+        boxComprou.classList.add("hidden");
+        state.comprou = null;
+        setActive(comprouRow, "");
+      }else if(state.jaUsou === true){
+        boxMarca.classList.add("hidden");
+        marca.value = "";
+        boxComprou.classList.remove("hidden");
+      }else{
+        boxMarca.classList.add("hidden");
+        boxComprou.classList.add("hidden");
+        marca.value = "";
+        state.comprou = null;
+        setActive(comprouRow, "");
+      }
+    }
+
+    perfilRow.addEventListener("click", (e)=>{
+      const b = e.target.closest(".pill");
+      if(!b) return;
+      state.perfil = b.dataset.v;
+      setActive(perfilRow, state.perfil);
+      // reset dependências
+      state.jaUsou = null;
+      state.comprou = null;
+      setActive(jaUsouRow, "");
+      setActive(comprouRow, "");
+      marca.value = "";
+      refreshConditional();
+    });
+
+    jaUsouRow.addEventListener("click", (e)=>{
+      const b = e.target.closest(".pill");
+      if(!b) return;
+      state.jaUsou = (b.dataset.v === "sim");
+      setActive(jaUsouRow, b.dataset.v);
+      refreshConditional();
+    });
+
+    comprouRow.addEventListener("click", (e)=>{
+      const b = e.target.closest(".pill");
+      if(!b) return;
+      state.comprou = (b.dataset.v === "sim");
+      setActive(comprouRow, b.dataset.v);
+    });
+
+    refreshConditional();
+
+    async function submit(){
+      const telefone = normalizePhone(tel.value);
+      if(!telefone || telefone.length < 10){
+        setMsg("Digite um celular válido.", "err");
+        return;
+      }
+      if(!state.perfil){
+        setMsg("Selecione um perfil.", "err");
+        return;
+      }
+      if(!nome.value.trim()){
+        setMsg("Digite seu nome.", "err");
+        return;
+      }
+
+      // validações condicionais (produtor/comercial)
+      if(state.perfil === "produtor" || state.perfil === "comercial"){
+        if(state.jaUsou === null){
+          setMsg("Responda se já utilizou Boa Safra.", "err");
+          return;
+        }
+        if(state.jaUsou === false){
+          if(!marca.value.trim()){
+            setMsg("Informe qual marca você usa.", "err");
+            return;
+          }
+        }
+        if(state.jaUsou === true){
+          if(state.comprou === null){
+            setMsg("Responda se comprou na última safra.", "err");
+            return;
+          }
+        }
+      }
+
+      // monta payload exatamente como o backend espera
+      const payload = {
+        nome: nome.value.trim(),
+        telefone,
+        email: email.value.trim() || "",
+        perfil: state.perfil,
+        consentimento: true
+      };
+
+      if(state.perfil === "produtor" || state.perfil === "comercial"){
+        payload.ja_usou_boasafra = state.jaUsou;
+        if(state.jaUsou === false){
+          payload.marca_semente = marca.value.trim();
+        }
+        if(state.jaUsou === true){
+          payload.comprou_ultima = state.comprou;
+        }
+      }
+
+      try{ localStorage.setItem("bs_phone", telefone); }catch{}
+
+      btn.disabled = true;
+      btnTxt.innerHTML = '<span class="spinner"></span> &nbsp;Enviando…';
+      msg.style.display = "none";
+
+      try{
+        const r = await fetch("/api/portal/register", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
+        });
+        if(!r.ok) throw new Error("http");
+
+        const j = await r.json();
+        if(!j || !j.ok) throw new Error("bad");
+
+        setMsg("Cadastro concluído ✅ Liberando internet…", "ok");
+
+        // chama /hs para logar no hotspot
+        const f = document.createElement("form");
+        f.method = "POST";
+        f.action = "/hs";
+        f.style.display = "none";
+        f.innerHTML = `
+          <input name="telefone" value="${telefone}">
+          <input name="perfil" value="${state.perfil}">
+          <input name="mt_login" value="http://192.168.10.1/login">
+        `;
+        document.body.appendChild(f);
+        f.submit();
+
+      }catch(e){
+        setMsg("Não consegui falar com o servidor. Tente novamente.", "err");
+      }finally{
+        btn.disabled = false;
+        btnTxt.textContent = "Finalizar e liberar internet";
+      }
+    }
+
+    btn.addEventListener("click", submit);
+  </script>
+</body>
+</html>

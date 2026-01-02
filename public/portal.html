@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Wi-Fi Boa Safra</title>
+  <meta name="theme-color" content="#0b5a2a" />
+  <style>
+    :root{
+      --g1:#0b5a2a; --g2:#1a7a35; --g3:#8cc63f;
+      --txt:#0f172a; --mut:#64748b; --bg:#ffffff;
+      --card:#ffffff; --bd:#e5e7eb; --err:#b91c1c;
+      --shadow:0 14px 40px rgba(2,6,23,.10);
+      --r:18px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt)}
+    .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:22px}
+    .card{width:min(520px,100%);background:var(--card);border:1px solid var(--bd);border-radius:24px;box-shadow:var(--shadow);overflow:hidden}
+    .top{padding:22px 22px 0}
+    .brand{display:flex;flex-direction:column;gap:8px}
+    .h{font-size:34px;line-height:1.05;margin:0;color:var(--g1);font-weight:900}
+    .p{margin:0;color:var(--mut);font-size:15px}
+    .bar{height:10px;border-radius:999px;background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));margin:16px 22px 0}
+    .body{padding:22px}
+    .box{border:1px solid var(--bd);border-radius:var(--r);padding:18px}
+    .t{font-weight:800;font-size:18px;margin:0 0 10px;color:#334155}
+    label{display:block;margin-top:10px;color:#334155;font-weight:700;font-size:13px}
+    input{
+      width:100%;padding:16px 16px;border-radius:14px;border:1px solid var(--bd);
+      font-size:18px;outline:none;margin-top:6px
+    }
+    input:focus{border-color:#86efac;box-shadow:0 0 0 4px rgba(34,197,94,.18)}
+    .btn{
+      width:100%;margin-top:14px;background:var(--g1);border:none;color:#fff;
+      padding:16px 18px;border-radius:14px;font-size:18px;font-weight:900;cursor:pointer
+    }
+    .btn:active{transform:translateY(1px)}
+    .hint{margin:10px 0 0;color:var(--mut);font-size:13px}
+    .msg{margin:10px 0 0;font-size:14px;font-weight:800}
+    .msg.ok{color:var(--g2)}
+    .msg.err{color:var(--err)}
+    .foot{padding:14px 22px 22px;color:#94a3b8;font-size:12px}
+    .spinner{
+      width:18px;height:18px;border:3px solid rgba(255,255,255,.35);
+      border-top-color:#fff;border-radius:50%;display:inline-block;vertical-align:-3px;
+      animation:spin 1s linear infinite
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <div class="brand">
+          <h1 class="h">Wi-Fi Boa Safra</h1>
+          <p class="p">Acesso rápido e check-in automático</p>
+        </div>
+      </div>
+      <div class="bar"></div>
+
+      <div class="body">
+        <div class="box">
+          <p class="t">Digite seu celular</p>
+          <p class="hint">Se você já cadastrou antes, a internet libera em segundos. Se for a primeira vez, você vai para um cadastro rápido.</p>
+
+          <label for="tel">Celular</label>
+          <input id="tel" inputmode="numeric" autocomplete="tel" placeholder="(DDD) 9xxxx-xxxx" />
+
+          <button class="btn" id="btn">
+            <span id="btnTxt">Continuar</span>
+          </button>
+
+          <div class="msg" id="msg" style="display:none"></div>
+          <p class="hint">Dica: da próxima vez a página pode preencher automaticamente.</p>
+        </div>
+      </div>
+
+      <div class="foot">
+        Ao continuar, você autoriza o uso do seu telefone apenas para registro de presença e contato pós-feira.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function normalizePhone(v){
+      const d = String(v||"").replace(/\D+/g,"");
+      if(!d) return "";
+      // aceita com ou sem 55; backend normaliza de novo também
+      if(d.length>=10 && d.length<=13) return d;
+      return d;
+    }
+
+    // tenta preencher do cache
+    const tel = document.getElementById("tel");
+    try{
+      const saved = localStorage.getItem("bs_phone") || "";
+      if(saved) tel.value = saved;
+    }catch{}
+
+    const msg = document.getElementById("msg");
+    const btn = document.getElementById("btn");
+    const btnTxt = document.getElementById("btnTxt");
+
+    function setMsg(text, type){
+      msg.style.display = "block";
+      msg.className = "msg " + (type||"");
+      msg.textContent = text;
+    }
+
+    async function lookup(){
+      const phone = normalizePhone(tel.value);
+      if(!phone){
+        setMsg("Digite um celular válido.", "err");
+        return;
+      }
+
+      try{ localStorage.setItem("bs_phone", phone); }catch{}
+
+      btn.disabled = true;
+      btnTxt.innerHTML = '<span class="spinner"></span> &nbsp;Verificando…';
+      msg.style.display = "none";
+
+      try{
+        const r = await fetch("/api/portal/lookup", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ telefone: phone })
+        });
+
+        if(!r.ok) throw new Error("http");
+
+        const j = await r.json();
+
+        if(j && j.ok && j.found){
+          setMsg("Acesso liberado ✅", "ok");
+
+          // chama o endpoint /hs para logar no hotspot (via form post)
+          const f = document.createElement("form");
+          f.method = "POST";
+          f.action = "/hs";
+          f.style.display = "none";
+          f.innerHTML = `
+            <input name="telefone" value="${phone}">
+            <input name="perfil" value="visitante">
+            <input name="mt_login" value="http://192.168.10.1/login">
+          `;
+          document.body.appendChild(f);
+          f.submit();
+          return;
+        }
+
+        // não achou → vai pro cadastro completo
+        window.location.href = "/portal-register.html?tel=" + encodeURIComponent(phone);
+
+      }catch(e){
+        setMsg("Não consegui falar com o servidor. Tente novamente.", "err");
+      }finally{
+        btn.disabled = false;
+        btnTxt.textContent = "Continuar";
+      }
+    }
+
+    btn.addEventListener("click", lookup);
+    tel.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); lookup(); }});
+  </script>
+</body>
+</html>
