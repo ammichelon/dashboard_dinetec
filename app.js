@@ -630,16 +630,26 @@ const EXPORT_LEADS_HEADERS = [
   });
 
   // iPad
-  app.post("/api/leads", async (req, res) => {
-    try {
-      const p = req.body || {};
-      if (!p.nome || !p.telefone || !p.perfil) return res.status(200).json({ ok: true });
-      await createLead(p, "ipad");
-      return res.status(200).json({ ok: true });
-    } catch {
-      return res.status(200).json({ ok: true });
+ app.post("/api/leads", async (req, res) => {
+  try {
+    const p = req.body || {};
+    if (!p.nome || !p.telefone || !p.perfil) {
+      return res.status(400).send("missing_fields");
     }
-  });
+
+    const lead = await createLead(p, "ipad");
+
+    // só confirma se realmente salvou
+    if (!lead?.id) {
+      return res.status(500).send("not_saved");
+    }
+
+    return res.sendStatus(200);
+  } catch (e) {
+    return res.status(500).send("server_error");
+  }
+});
+
 
   // Dashboard APIs
   app.get("/api/dashboard/days", async (req, res) => {
