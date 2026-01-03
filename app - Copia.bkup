@@ -13,9 +13,6 @@ if (DB_PATH) process.env.DB_PATH = DB_PATH;
 // Segurança ingest
 const INGEST_TOKEN = process.env.INGEST_TOKEN || "";
 
-// ✅ ADMIN reset password (default: 2609)
-const RESET_PASSWORD = String(process.env.RESET_PASSWORD || "2609");
-
 // DB helpers
 const { initDb, nowParts, normalizePhone } = require("./db");
 
@@ -328,169 +325,6 @@ const EXPORT_LEADS_HEADERS = [
   autoCsvBackup();
   setInterval(autoCsvBackup, 30 * 60 * 1000);
 
-  // ✅ RESET DB helpers
-  async function resetDatabase() {
-    // transação pra garantir atomicidade
-    await db.exec("BEGIN IMMEDIATE;");
-    try {
-      await db.exec("DELETE FROM checkins;");
-      await db.exec("DELETE FROM leads;");
-      // reseta autoincrement
-      try {
-        await db.exec("DELETE FROM sqlite_sequence WHERE name IN ('leads','checkins');");
-      } catch {}
-      await db.exec("COMMIT;");
-    } catch (e) {
-      try { await db.exec("ROLLBACK;"); } catch {}
-      throw e;
-    }
-
-    // VACUUM fora da transação (SQLite exige)
-    try { await db.exec("VACUUM;"); } catch {}
-  }
-
-  // ✅ Página simples com popup (confirm + senha)
-  app.get("/admin/reset", (req, res) => {
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.status(200).send(`<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Reset DB • Boa Safra</title>
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;padding:18px;background:#f6faf8;color:#0f172a}
-    .wrap{max-width:520px;margin:0 auto}
-    .card{background:#fff;border:1px solid #e7edf0;border-radius:16px;padding:16px;box-shadow:0 10px 22px rgba(0,0,0,.08)}
-    h1{margin:0 0 8px;color:#0b5a2a;font-size:18px}
-    p{margin:0 0 14px;color:#5b677a}
-    button{width:100%;padding:12px;border:0;border-radius:12px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#0b5a2a,#1f7a36);cursor:pointer}
-    .muted{margin-top:10px;font-size:12px;color:#7a8799}
-    .ok{color:#0b5a2a;font-weight:900}
-    .err{color:#b91c1c;font-weight:900}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Resetar banco de dados</h1>
-      <p>Isso vai apagar <b>todos</b> os leads e check-ins do Railway.</p>
-      <button id="btn">Resetar agora</button>
-      <div class="muted" id="msg"></div>
-    </div>
-  </div>
-  <script>
-    const btn = document.getElementById('btn');
-    const msg = document.getElementById('msg');
-
-    btn.addEventListener('click', async () => {
-      msg.textContent = '';
-      const ok = confirm('Tem certeza? Isso apaga TUDO do banco do Railway.');
-      if(!ok) return;
-
-      const pw = prompt('Digite a senha para confirmar:');
-      if(pw === null) return;
-
-      btn.disabled = true;
-      btn.style.opacity = 0.7;
-      msg.textContent = 'Resetando...';
-
-      try{
-        const r = await fetch('/api/admin/reset', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ password: pw })
-        });
-        const j = await r.json().catch(()=>({ok:false}));
-        if(j.ok){
-          msg.innerHTML = '<span class="ok">OK ✅ Banco resetado.</span> Recarrega o dashboard.';
-        }else{
-          msg.innerHTML = '<span class="err">Falhou:</span> ' + (j.error || 'erro');
-        }
-      }catch(e){
-        msg.innerHTML = '<span class="err">Erro de conexão.</span>';
-      }finally{
-        btn.disabled = false;
-        btn.style.opacity = 1;
-      }
-    });
-  </script>
-</body>
-</html>`);
-  });
-
-  // ✅ Endpoint do reset (com senha)
-  app.post("/api/admin/reset", async (req, res) => {
-    try {
-      const pw = String(req.body?.password || "");
-      if (pw !== RESET_PASSWORD) return res.status(401).json({ ok: false, error: "bad_password" });
-
-      await resetDatabase();
-      return res.json({ ok: true });
-    } catch (err) {
-      console.error("❌ /api/admin/reset error:", err);
-      return res.status(500).json({ ok: false, error: String(err?.message || err) });
-    }
-  });
-
-  // ====== ✅ INGEST (Rasp -> Railway) ======
-  app.post("/api/ingest", async (req, res) => {
-    try {
-      if (!INGEST_TOKEN) return res.status(500).json({ ok: false, error: "missing_token_server" });
-      const token = String(req.body?.token || "");
-      if (token !== INGEST_TOKEN) return res.status(401).json({ ok: false, error: "bad_token" });
-
-      const leads = Array.isArray(req.body?.leads) ? req.body.leads : [];
-      const checkins = Array.isArray(req.body?.checkins) ? req.body.checkins : [];
-
-      let leadsOk = 0;
-      let checkinsOk = 0;
-
-      // 1) grava leads
-      for (const item of leads) {
-        try {
-          if (!item?.nome || !(item?.telefone_raw || item?.telefone_norm || item?.telefone)) continue;
-          if (!item?.perfil) continue;
-          const origem = item.origem === "wifi" || item.origem === "ipad" ? item.origem : "ipad";
-          await createLead(item, origem);
-          leadsOk++;
-        } catch {}
-      }
-
-      // 2) grava checkins (resolve lead_id por telefone_norm)
-      for (const c of checkins) {
-        try {
-          const telefoneNorm = c.telefone_norm ? String(c.telefone_norm) : normalizePhone(c.telefone_raw || c.telefone);
-          if (!telefoneNorm) continue;
-
-          const lead = await db.get("SELECT id FROM leads WHERE telefone_norm = ?", telefoneNorm);
-          if (!lead?.id) continue;
-
-          const created_at = c.created_at || new Date().toISOString();
-          const day_key = c.day_key || created_at.slice(0, 10);
-          const hh = Number.isFinite(c.hour) ? c.hour : Number(String(created_at).slice(11, 13));
-
-          // evita duplicar com índice único (lead_id, created_at)
-          await db.run(
-            "INSERT OR IGNORE INTO checkins (lead_id, origem, created_at, day_key, hour) VALUES (?, 'wifi', ?, ?, ?)",
-            [lead.id, created_at, day_key, hh]
-          );
-          checkinsOk++;
-        } catch {}
-      }
-
-      return res.json({
-        ok: true,
-        leads_received: leads.length,
-        leads_saved: leadsOk,
-        checkins_received: checkins.length,
-        checkins_saved: checkinsOk,
-      });
-    } catch {
-      return res.status(500).json({ ok: false, error: "ingest_failed" });
-    }
-  });
-
   async function getLeadByPhoneNorm(phoneNorm) {
     return db.get("SELECT * FROM leads WHERE telefone_norm = ?", phoneNorm);
   }
@@ -513,16 +347,10 @@ const EXPORT_LEADS_HEADERS = [
     if (payload.comprou_ultima === true) comprou_ultima = 1;
     else if (payload.comprou_ultima === false) comprou_ultima = 0;
 
-    const sementes_atuais = Array.isArray(payload.sementes_atuais)
-      ? JSON.stringify(payload.sementes_atuais)
-      : (payload.sementes_atuais || null);
-
+    const sementes_atuais = Array.isArray(payload.sementes_atuais) ? JSON.stringify(payload.sementes_atuais) : (payload.sementes_atuais || null);
     const sementes_outras = (payload.sementes_outras || "").trim() || null;
 
-    const culturas = Array.isArray(payload.culturas)
-      ? JSON.stringify(payload.culturas)
-      : (payload.culturas || null);
-
+    const culturas = Array.isArray(payload.culturas) ? JSON.stringify(payload.culturas) : (payload.culturas || null);
     const culturas_outras = (payload.culturas_outras || "").trim() || null;
 
     const comercial_empresa = (payload.comercial_empresa || "").trim() || null;
@@ -575,22 +403,70 @@ const EXPORT_LEADS_HEADERS = [
 
   async function maybeCreateCheckin(leadId) {
     const { iso, dayKey, hour } = nowParts();
-    const last = await db.get(
-      "SELECT created_at FROM checkins WHERE lead_id = ? ORDER BY created_at DESC LIMIT 1",
-      leadId
-    );
+    const last = await db.get("SELECT created_at FROM checkins WHERE lead_id = ? ORDER BY created_at DESC LIMIT 1", leadId);
     if (last?.created_at) {
       const lastMs = Date.parse(last.created_at);
       const nowMs = Date.parse(iso);
       const diffMin = (nowMs - lastMs) / 60000;
       if (diffMin < CHECKIN_COOLDOWN_MIN) return { created: false, diffMin };
     }
-    await db.run(
-      "INSERT INTO checkins (lead_id, origem, created_at, day_key, hour) VALUES (?, 'wifi', ?, ?, ?)",
-      [leadId, iso, dayKey, hour]
-    );
+    await db.run("INSERT INTO checkins (lead_id, origem, created_at, day_key, hour) VALUES (?, 'wifi', ?, ?, ?)", [
+      leadId, iso, dayKey, hour
+    ]);
     return { created: true };
   }
+
+  // ====== ✅ INGEST (Rasp -> Railway) ======
+  app.post("/api/ingest", async (req, res) => {
+    try {
+      if (!INGEST_TOKEN) return res.status(500).json({ ok: false, error: "missing_token_server" });
+      const token = String(req.body?.token || "");
+      if (token !== INGEST_TOKEN) return res.status(401).json({ ok: false, error: "bad_token" });
+
+      const leads = Array.isArray(req.body?.leads) ? req.body.leads : [];
+      const checkins = Array.isArray(req.body?.checkins) ? req.body.checkins : [];
+
+      let leadsOk = 0;
+      let checkinsOk = 0;
+
+      // 1) grava leads
+      for (const item of leads) {
+        try {
+          if (!item?.nome || !(item?.telefone_raw || item?.telefone_norm || item?.telefone)) continue;
+          if (!item?.perfil) continue;
+          const origem = item.origem === "wifi" || item.origem === "ipad" ? item.origem : "ipad";
+          await createLead(item, origem);
+          leadsOk++;
+        } catch {}
+      }
+
+      // 2) grava checkins (resolve lead_id por telefone_norm)
+      for (const c of checkins) {
+        try {
+          const telefoneNorm = c.telefone_norm ? String(c.telefone_norm) : normalizePhone(c.telefone_raw || c.telefone);
+          if (!telefoneNorm) continue;
+
+          const lead = await db.get("SELECT id FROM leads WHERE telefone_norm = ?", telefoneNorm);
+          if (!lead?.id) continue;
+
+          const created_at = c.created_at || new Date().toISOString();
+          const day_key = c.day_key || created_at.slice(0, 10);
+          const hh = Number.isFinite(c.hour) ? c.hour : Number(String(created_at).slice(11, 13));
+
+          // evita duplicar com índice único (lead_id, created_at)
+          await db.run(
+            "INSERT OR IGNORE INTO checkins (lead_id, origem, created_at, day_key, hour) VALUES (?, 'wifi', ?, ?, ?)",
+            [lead.id, created_at, day_key, hh]
+          );
+          checkinsOk++;
+        } catch {}
+      }
+
+      return res.json({ ok: true, leads_received: leads.length, leads_saved: leadsOk, checkins_received: checkins.length, checkins_saved: checkinsOk });
+    } catch {
+      return res.status(500).json({ ok: false, error: "ingest_failed" });
+    }
+  });
 
   // ===== Wi-Fi (/hs) =====
   app.get("/hs", async (req, res) => {
@@ -652,13 +528,14 @@ const EXPORT_LEADS_HEADERS = [
   });
 
   app.get("/api/dashboard/summary", async (req, res) => {
-    try {
-      return res.json(await dashboardSummary(db));
-    } catch (err) {
-      console.error("❌ /api/dashboard/summary error:", err);
-      return res.status(500).json({ ok: false, error: String(err?.message || err) });
-    }
-  });
+  try {
+    return res.json(await dashboardSummary(db));
+  } catch (err) {
+    console.error("❌ /api/dashboard/summary error:", err);
+    return res.status(500).json({ ok: false, error: String(err?.message || err) });
+  }
+});
+
 
   app.get("/api/dashboard/day/:dayKey", async (req, res) => {
     try {
@@ -692,3 +569,4 @@ const EXPORT_LEADS_HEADERS = [
     console.log(`✅ Leads system rodando em http://0.0.0.0:${PORT}`);
   });
 })();
+// teste
